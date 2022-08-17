@@ -1,1 +1,1 @@
-# bd-districts-density
+This is a visualization of density of different districts in bangladesh. The density information per square km of all the districts is collected from wikipedia 2011 chart which may differ from the present day.
