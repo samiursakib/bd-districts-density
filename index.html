@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Choropleth</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="index.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+            integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+            crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+            integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+            crossorigin="">
+        </script>
+        <script src="./bd-districts.js"></script>
+    </head>
+    <body>
+        <div id="map"></div>
+
+        <script>
+            const getColor = (value) => value > 2000 ? '#062d1f' :
+                                        value > 1500 ? '#094c34' :
+                                        value > 1200 ? '#0d6a49' :
+                                        value > 1000 ? '#11885e' :
+                                        value > 900  ? '#14a772' :
+                                        value > 800  ? '#18c587' :
+                                        value > 700  ? '#1ce39c' :
+                                        value > 600  ? '#3ae7a9' :
+                                        value > 500  ? '#58ebb6' :
+                                        value > 400  ? '#77eec4' :
+                                        value > 300  ? '#95f2d1' :
+                                        value > 100  ? '#b3f6de' :
+                                                       '#d2f9eb';
+
+            const style = (feature) => ({
+                fillColor: getColor(feature.properties.density),
+                weight: 1,
+                opacity: 1,
+                color: '#333',
+                dashArray: '5',
+                fillOpacity: 0.8
+            });
+
+            let map = L.map('map').setView([23.777176, 90.399452], 7);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 15,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+            
+            let geojson;
+            
+            var info = L.control();
+
+            info.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'info');
+                this.update();
+                return this._div;
+            };
+            info.update = function (props) {
+                this._div.innerHTML = '<h4>Details</h4>' +  (props ?
+                    '<b>' + props.ADM2_EN + '</b><br />Density : ' + props.density + ' / km<sup>2</sup>'
+                    : 'Hover over a district');
+            };
+            info.addTo(map);
+
+            let legend = L.control({position: 'bottomright'});
+            legend.onAdd = (map) => {
+                let div = L.DomUtil.create('div', 'info legend'),
+                    grades = [0, 100, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000],
+                    labels = [];
+                for(let i = 0; i < grades.length; i++) {
+                    div.innerHTML += '<i style="background:' + getColor(grades[i] + 1) + '"></i>' +
+                                    grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                }
+                return div;
+            };
+            legend.addTo(map);
+            
+            const highlightFeature = (e) => {
+                let layer = e.target;
+                layer.setStyle({
+                    weight: 2,
+                    color: '#111',
+                    dashArray: '',
+                    fillOpacity: 1
+                });
+                if(!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                    layer.bringToFront();
+                }
+                info.update(layer.feature.properties);
+            }
+            const resetHighlight = (e) => {
+                geojson.resetStyle(e.target);
+                info.update();
+            }
+            const zoomToFeature = (e) => {
+                map.fitBounds(e.target.getBounds());
+            }
+            const onEachFeature = (feature, layer) => {
+                layer.on({
+                    mouseover: highlightFeature,
+                    mouseout: resetHighlight,
+                    click: zoomToFeature
+                });
+            }
+            geojson = L.geoJSON(bdDistricts, {
+                style: style,
+                onEachFeature: onEachFeature
+            }).addTo(map);
+
+        </script>
+
+    </body>
+</html>
+
+
